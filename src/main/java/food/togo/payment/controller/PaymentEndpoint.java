@@ -20,10 +20,11 @@ public class PaymentEndpoint {
     @Autowired PaymentService paymentService;
 
     @PostMapping("/charge")
-    public String charge(ChargeRequest chargeRequest, Model model) throws StripeException {
+    public String charge(ChargeRequest chargeRequest, Model model) throws StripeException, Exception {
         chargeRequest.setDescription("Example charge");
         chargeRequest.setCurrency(ChargeRequest.Currency.USD);
-        Charge charge = paymentService.chargeCustomer(chargeRequest);
+        Charge charge = null;
+        charge = paymentService.chargeCustomer(chargeRequest);
         model.addAttribute("id", charge.getId());
         model.addAttribute("status", charge.getStatus());
         model.addAttribute("chargeId", charge.getId());
@@ -33,6 +34,12 @@ public class PaymentEndpoint {
 
     @ExceptionHandler(StripeException.class)
     public String handleError(Model model, StripeException ex) {
+        model.addAttribute("error", ex.getMessage());
+        return "result";
+    }
+
+    @ExceptionHandler(Exception.class)
+    public String handleError(Model model, Exception ex) {
         model.addAttribute("error", ex.getMessage());
         return "result";
     }

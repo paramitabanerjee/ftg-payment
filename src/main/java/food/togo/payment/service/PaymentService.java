@@ -72,7 +72,6 @@ public class PaymentService {
 
     private String getStripeCustomerId(ChargeRequest chargeRequest) {
 
-
         Integer customerId = chargeRequest.getCustomerId();
 
         //make a rest call
