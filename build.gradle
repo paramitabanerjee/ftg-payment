@@ -12,6 +12,8 @@ repositories {
     mavenCentral()
 }
 
+apply plugin: 'io.spring.dependency-management'
+
 
 dependencies {
     compile("org.springframework.boot:spring-boot-starter-web")
