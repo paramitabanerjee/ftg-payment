@@ -4,8 +4,16 @@ import com.stripe.Stripe;
 import com.stripe.exception.*;
 import com.stripe.model.Charge;
 import com.stripe.model.Customer;
+import food.togo.payment.config.RestTemplateConfig;
+import food.togo.payment.dto.CustomerEntity;
 import food.togo.payment.request.ChargeRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +23,9 @@ public class PaymentService {
 
     //@Value("${STRIPE_PUBLIC_KEY}")
     private String stripePublicKey = "pk_test_JMlbR4PSbP5qPVON78QsDW8b";
+
+    @Autowired
+    private RestTemplate restTemplate;
 
     public PaymentService() {
         Stripe.apiKey = stripePublicKey;
@@ -69,13 +80,20 @@ public class PaymentService {
     }
 
     //calls customer endppoints here to get customer details
+    @Value("customer.endpoint")
+    private String customerEndpoint;
 
     private String getStripeCustomerId(ChargeRequest chargeRequest) {
 
         Integer customerId = chargeRequest.getCustomerId();
 
         //make a rest call
-        CustomerEntity customerEntity = customerService.getCustomer(customerId);
+        Map<String, Object> map = new HashMap<>();
+        map.put("customerId", customerId);
+
+        ResponseEntity<CustomerEntity> responseEntity
+                = restTemplate.getForObject(customerEndpoint, ResponseEntity.class, map);
+        CustomerEntity customerEntity = responseEntity.getBody();
         String stripeCustomerId = customerEntity.getStripeCustomerID();
 
         Map<String, Object> chargeParamsForSaveCustomer = new HashMap<>();

@@ -14,7 +14,7 @@
         </style>
 </head>
 <body>
-<form action='/charge' method='POST' id='checkout-form'>
+<form action='/paymentServices/charge' method='POST' id='checkout-form'>
     <input type='hidden' th:value='${amount}' name='amount' />
     <input type='hidden' th:value='${customerId}' name='customerId' />
     <label>Price:<span th:text='${amount/100}' /></label>

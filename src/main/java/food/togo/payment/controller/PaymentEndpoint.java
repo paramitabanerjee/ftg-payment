@@ -3,13 +3,12 @@ package food.togo.payment.controller;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
 import food.togo.payment.request.ChargeRequest;
+import food.togo.payment.request.CheckoutRequest;
 import food.togo.payment.service.PaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 @Controller
 public class PaymentEndpoint {
@@ -44,9 +43,23 @@ public class PaymentEndpoint {
         return "result";
     }
 
-    @RequestMapping("/checkout/{customerId}")
-    public String checkout(Model model, Integer customerId) {
-        model.addAttribute("amount", 50 * 100); // in cents
+    /*@PostMapping("/checkout")
+
+    public String checkout(@RequestBody CheckoutRequest checkoutRequest, Model model, Integer customerId) {
+
+        model.addAttribute("amount", checkoutRequest.getAmount() * 100); // in cents
+        model.addAttribute("stripePublicKey", stripePublicKey);
+        model.addAttribute("currency", ChargeRequest.Currency.USD);
+        model.addAttribute("customerId", checkoutRequest.getCustomerId());
+        return "checkout";
+    }*/
+
+    @RequestMapping("/checkout")
+
+    public String checkout(@RequestParam(value="customerId") Integer customerId,
+            Model model, @RequestParam(value="amount") Float amount) {
+
+        model.addAttribute("amount", (int) (amount * 100)); // in cents
         model.addAttribute("stripePublicKey", stripePublicKey);
         model.addAttribute("currency", ChargeRequest.Currency.USD);
         model.addAttribute("customerId", customerId);
