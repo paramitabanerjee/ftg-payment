@@ -44,7 +44,7 @@ public class PaymentService {
         String stripeCustomerId = getStripeCustomerId(chargeRequest);
 
         Map<String, Object> chargeParams = new HashMap<>();
-        chargeParams.put("amount", chargeRequest.getAmount());
+        chargeParams.put("amount", chargeRequest.getAmountCents());
         chargeParams.put("currency", chargeRequest.getCurrency());
         chargeParams.put("description", chargeRequest.getDescription());
 
@@ -80,7 +80,7 @@ public class PaymentService {
     }
 
     //calls customer endppoints here to get customer details
-    @Value("customer.endpoint")
+    @Value("${customer.endpoint}")
     private String customerEndpoint;
 
     private String getStripeCustomerId(ChargeRequest chargeRequest) {
@@ -95,6 +95,9 @@ public class PaymentService {
                 = restTemplate.getForObject(customerEndpoint, ResponseEntity.class, map);
         CustomerEntity customerEntity = responseEntity.getBody();
         String stripeCustomerId = customerEntity.getStripeCustomerID();
+        if(stripeCustomerId != null) {
+            return stripeCustomerId;
+        }
 
         Map<String, Object> chargeParamsForSaveCustomer = new HashMap<>();
         chargeParamsForSaveCustomer.put("source", chargeRequest.getStripeToken());

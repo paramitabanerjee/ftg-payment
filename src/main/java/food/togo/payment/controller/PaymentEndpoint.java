@@ -59,7 +59,7 @@ public class PaymentEndpoint {
     public String checkout(@RequestParam(value="customerId") Integer customerId,
             Model model, @RequestParam(value="amount") Float amount) {
 
-        model.addAttribute("amount", (int) (amount * 100)); // in cents
+        model.addAttribute("amount", (int)(amount*100));
         model.addAttribute("stripePublicKey", stripePublicKey);
         model.addAttribute("currency", ChargeRequest.Currency.USD);
         model.addAttribute("customerId", customerId);
