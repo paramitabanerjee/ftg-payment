@@ -5,6 +5,8 @@ import com.stripe.model.Charge;
 import food.togo.payment.request.ChargeRequest;
 import food.togo.payment.request.CheckoutRequest;
 import food.togo.payment.service.PaymentService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -16,6 +18,8 @@ public class PaymentEndpoint {
     //@Value("${STRIPE_PUBLIC_KEY}")
     private String stripePublicKey = "pk_test_JMlbR4PSbP5qPVON78QsDW8b";
 
+    Logger logger = LoggerFactory.getLogger(PaymentEndpoint.class);
+
     @Autowired PaymentService paymentService;
 
     @PostMapping("/charge")
@@ -24,10 +28,19 @@ public class PaymentEndpoint {
         chargeRequest.setCurrency(ChargeRequest.Currency.USD);
         Charge charge = null;
         charge = paymentService.chargeCustomer(chargeRequest);
-        model.addAttribute("id", charge.getId());
-        model.addAttribute("status", charge.getStatus());
-        model.addAttribute("chargeId", charge.getId());
-        model.addAttribute("balance_transaction", charge.getBalanceTransaction());
+
+        if(charge != null) {
+            logger.info ("Charge Id = {}", charge.getId());
+            model.addAttribute("id", charge.getId());
+            model.addAttribute("status", charge.getStatus());
+            model.addAttribute("chargeId", charge.getId());
+            model.addAttribute("balance_transaction", charge.getBalanceTransaction());
+        } else {
+            model.addAttribute("error", "payment Failed !");
+        }
+
+        //save payment information in DB
+
         return "result";
     }
 
