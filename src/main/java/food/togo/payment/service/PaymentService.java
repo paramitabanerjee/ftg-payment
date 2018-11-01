@@ -6,6 +6,7 @@ import com.stripe.model.Charge;
 import com.stripe.model.Customer;
 import food.togo.payment.config.RestTemplateConfig;
 import food.togo.payment.dto.CustomerEntity;
+import food.togo.payment.entities.PaymentHistory;
 import food.togo.payment.request.ChargeRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -24,7 +26,14 @@ import java.util.Map;
 public class PaymentService {
 
     //@Value("${STRIPE_PUBLIC_KEY}")
-    private String stripePublicKey = "pk_test_JMlbR4PSbP5qPVON78QsDW8b";
+    private String stripePublicKey = "sk_test_SWHVVUmN7qSmBTRhEW5qKXX6";
+
+    //calls customer endppoints here to get customer details
+    @Value("${get.customer.endpoint}")
+    private String customerEndpointGET;
+    @Value("${update.customer.endpoint}")
+    private String customerEndpointUPDATE;
+
 
     Logger logger = LoggerFactory.getLogger(PaymentService.class);
 
@@ -90,12 +99,6 @@ public class PaymentService {
         }
         return null;
     }
-
-    //calls customer endppoints here to get customer details
-    @Value("${get.customer.endpoint}")
-    private String customerEndpointGET;
-    @Value("${update.customer.endpoint}")
-    private String customerEndpointUPDATE;
 
     private String getStripeCustomerId(ChargeRequest chargeRequest) {
 
@@ -165,6 +168,22 @@ public class PaymentService {
         }
 
         return stripeCustomerId;
+    }
+
+    @Async
+    public void savePaymentInformation(Charge charge, Integer customerId, Long orderId) {
+
+        PaymentHistory paymentHistory = new PaymentHistory();
+        paymentHistory.setAmount(charge.getAmount());
+        paymentHistory.setCreated(new java.sql.Date(charge.getCreated()));
+        paymentHistory.setCurrency(charge.getCurrency());
+        paymentHistory.setCustomerID(customerId);
+        paymentHistory.setStripeChargeId(charge.getId());
+        paymentHistory.setOrderID(orderId);
+        paymentHistory.setRefund(charge.getAmountRefunded());
+        paymentHistory.setStatus(charge.getStatus());
+        paymentHistory.setError(charge.getFailureMessage());
+
     }
 
 }
