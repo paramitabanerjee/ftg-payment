@@ -10,6 +10,7 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 apply plugin: 'io.spring.dependency-management'
@@ -24,4 +25,6 @@ dependencies {
     compile group: 'org.projectlombok', name: 'lombok', version: '1.18.2'
     compile group: 'com.stripe', name: 'stripe-java', version: '7.1.0'
 
+    compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.13'
+    compile group: 'food.togo.platform', name: 'platform', version: '1.0-SNAPSHOT'
 }

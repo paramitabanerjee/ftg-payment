@@ -40,7 +40,7 @@ public class PaymentEndpoint {
         }
 
         //save payment information in DB
-        paymentService.savePaymentInformation(charge, chargeRequest.getCustomerId(), chargeRequest.getOrderId());
+        paymentService.savePaymentInformation(charge, chargeRequest.getCustomerId(), 123L/*chargeRequest.getOrderId()*/);
 
         return "result";
     }

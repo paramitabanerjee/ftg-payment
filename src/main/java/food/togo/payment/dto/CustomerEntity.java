@@ -23,6 +23,8 @@ public class CustomerEntity {
     private Integer zip;
     private Integer status;
     private String stripeCustomerID;
+    private String salt;
+    private String IV;
 
 
 }

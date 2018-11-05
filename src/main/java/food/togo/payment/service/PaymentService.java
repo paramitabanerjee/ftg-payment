@@ -8,6 +8,7 @@ import food.togo.payment.config.RestTemplateConfig;
 import food.togo.payment.dto.CustomerEntity;
 import food.togo.payment.entities.PaymentHistory;
 import food.togo.payment.request.ChargeRequest;
+import food.togo.platform.EncryptionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +26,6 @@ import java.util.Map;
 @Service("payment")
 public class PaymentService {
 
-    //@Value("${STRIPE_PUBLIC_KEY}")
     private String stripePublicKey = "sk_test_SWHVVUmN7qSmBTRhEW5qKXX6";
 
     //calls customer endppoints here to get customer details
@@ -117,7 +117,10 @@ public class PaymentService {
             customerEntity = responseEntity.getBody();
             stripeCustomerId = customerEntity.getStripeCustomerID();
             if(stripeCustomerId != null) {
-                return stripeCustomerId;
+
+                //decrypt Stripe Id
+                String decryptedStripeId = EncryptionUtil.decrypt(stripeCustomerId.toCharArray(), customerEntity.getSalt());
+                return decryptedStripeId;
             }
         } catch (Exception e) {
            logger.error("Could not fetch customer {} details.. check customer endpoint", customerId);
@@ -158,8 +161,11 @@ public class PaymentService {
 
         //save stripe customerId in Customer table
         if(stripeCustomerId != null ) {
-            customerEntity.setStripeCustomerID(stripeCustomerId);
+            //encrypt with salt and IV
             try {
+                String encryptedStripeCustomerId =
+                        EncryptionUtil.encrypt(stripeCustomerId.toCharArray(), customerEntity.getSalt());
+                customerEntity.setStripeCustomerID(encryptedStripeCustomerId);
                 restTemplate.put(customerEndpointUPDATE, customerEntity);
                 logger.debug("Saved Stripe customer Id for customer {} in database", customerId);
             } catch (Exception e) {
