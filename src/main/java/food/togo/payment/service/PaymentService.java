@@ -26,7 +26,7 @@ import java.util.Map;
 @Service("payment")
 public class PaymentService {
 
-    private String stripePublicKey = "sk_test_SWHVVUmN7qSmBTRhEW5qKXX6";
+    private String stripePublicKey = "pk_test_JMlbR4PSbP5qPVON78QsDW8b";
 
     //calls customer endppoints here to get customer details
     @Value("${get.customer.endpoint}")
@@ -178,6 +178,10 @@ public class PaymentService {
 
     @Async
     public void savePaymentInformation(Charge charge, Integer customerId, Long orderId) {
+
+        if(charge == null) {
+            return;
+        }
 
         PaymentHistory paymentHistory = new PaymentHistory();
         paymentHistory.setAmount(charge.getAmount());
