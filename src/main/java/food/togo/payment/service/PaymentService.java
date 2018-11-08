@@ -10,6 +10,7 @@ import food.togo.payment.entities.CustomerStripe;
 import food.togo.payment.entities.PaymentHistory;
 import food.togo.payment.repositories.CustomerStripeRepository;
 import food.togo.payment.request.ChargeRequest;
+import food.togo.platform.EncryptionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,20 +32,12 @@ public class PaymentService {
     @Autowired
     CustomerStripeRepository customerStripeRepository;
 
-    //@Value("${STRIPE_PUBLIC_KEY}")
-    private String stripePublicKey = "sk_test_SWHVVUmN7qSmBTRhEW5qKXX6";
+    private String stripePublicKey = "pk_test_JMlbR4PSbP5qPVON78QsDW8b";
 
-    //calls customer endppoints here to get customer details
-    @Value("${get.customer.endpoint}")
-    private String customerEndpointGET;
-    @Value("${update.customer.endpoint}")
-    private String customerEndpointUPDATE;
 
 
     Logger logger = LoggerFactory.getLogger(PaymentService.class);
 
-    @Autowired
-    private RestTemplate restTemplate;
 
     public PaymentService() {
         Stripe.apiKey = stripePublicKey;
@@ -122,24 +115,6 @@ public class PaymentService {
         return stripeCustomerId;
     }
 
-    private String getStripeCustomerId(Integer customerId) {
-        String stripeCustomerId = null;
-
-        Optional<CustomerStripe> stripeInfo = customerStripeRepository.findByCustomerId(customerId);
-        if(stripeInfo.isPresent()) {
-            String encrptedStripeCustomerId = stripeInfo.get().getStripeId();
-            if(encrptedStripeCustomerId != null) {
-
-                byte[] salt = stripeInfo.get().getSalt();
-
-                stripeCustomerId = EncryptionUtil.decrypt(encrptedStripeCustomerId, salt);
-
-                //decrypt
-                return stripeCustomerId;
-            }
-        }
-    }
-
 
     private String createStripeCustomer(ChargeRequest chargeRequest) {
         try {
@@ -173,6 +148,7 @@ public class PaymentService {
         return null;
     }
 
+
     @Async
     public void saveStripeCustomer(String stripeId, Integer customerId) {
         CustomerStripe customerStripe = new CustomerStripe();
@@ -183,10 +159,30 @@ public class PaymentService {
         customerStripe.setSalt(salt);
         customerStripe.setCustomerId(customerId);
         customerStripeRepository.save(customerStripe);
+
+        //save stripe customerId in Customer table
+        if(stripeCustomerId != null ) {
+            //encrypt with salt and IV
+            try {
+                String encryptedStripeCustomerId =
+                        EncryptionUtil.encrypt(stripeCustomerId.toCharArray(), customerEntity.getSalt());
+                customerEntity.setStripeCustomerID(encryptedStripeCustomerId);
+                restTemplate.put(customerEndpointUPDATE, customerEntity);
+                logger.debug("Saved Stripe customer Id for customer {} in database", customerId);
+            } catch (Exception e) {
+                logger.error("Could not Save customer {} Stripe Id.. check customer endpoint", customerId);
+            }
+        }
+
+        return stripeCustomerId;
     }
 
     @Async
     public void savePaymentInformation(Charge charge, Integer customerId, Long orderId) {
+
+        if(charge == null) {
+            return;
+        }
 
         PaymentHistory paymentHistory = new PaymentHistory();
         paymentHistory.setAmount(charge.getAmount());

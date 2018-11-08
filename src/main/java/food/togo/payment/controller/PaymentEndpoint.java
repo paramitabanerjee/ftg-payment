@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentEndpoint {
 
     //@Value("${STRIPE_PUBLIC_KEY}")
-    private String stripePublicKey = "sk_test_SWHVVUmN7qSmBTRhEW5qKXX6";
+    private String stripePublicKey = "pk_test_JMlbR4PSbP5qPVON78QsDW8b";
 
     Logger logger = LoggerFactory.getLogger(PaymentEndpoint.class);
 
@@ -40,7 +40,7 @@ public class PaymentEndpoint {
         }
 
         //save payment information in DB
-        paymentService.savePaymentInformation(charge, chargeRequest.getCustomerId(), chargeRequest.getOrderId());
+        paymentService.savePaymentInformation(charge, chargeRequest.getCustomerId(), 123L/*chargeRequest.getOrderId()*/);
 
         return "result";
     }
