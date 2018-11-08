@@ -6,7 +6,9 @@ import com.stripe.model.Charge;
 import com.stripe.model.Customer;
 import food.togo.payment.config.RestTemplateConfig;
 import food.togo.payment.dto.CustomerEntity;
+import food.togo.payment.entities.CustomerStripe;
 import food.togo.payment.entities.PaymentHistory;
+import food.togo.payment.repositories.CustomerStripeRepository;
 import food.togo.payment.request.ChargeRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,9 +23,13 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Service("payment")
 public class PaymentService {
+
+    @Autowired
+    CustomerStripeRepository customerStripeRepository;
 
     //@Value("${STRIPE_PUBLIC_KEY}")
     private String stripePublicKey = "sk_test_SWHVVUmN7qSmBTRhEW5qKXX6";
@@ -103,38 +109,47 @@ public class PaymentService {
     private String getStripeCustomerId(ChargeRequest chargeRequest) {
 
         Integer customerId = chargeRequest.getCustomerId();
-        String stripeCustomerId = null;
+        String stripeCustomerId = getStripeCustomerId(customerId);
 
-        //make a rest call
-        Map<String, Object> map = new HashMap<>();
-        map.put("customerId", customerId);
-
-        CustomerEntity customerEntity = null;
-
-        try {
-            ResponseEntity<CustomerEntity> responseEntity
-                    = restTemplate.getForObject(customerEndpointGET, ResponseEntity.class, map);
-            customerEntity = responseEntity.getBody();
-            stripeCustomerId = customerEntity.getStripeCustomerID();
-            if(stripeCustomerId != null) {
-                return stripeCustomerId;
-            }
-        } catch (Exception e) {
-           logger.error("Could not fetch customer {} details.. check customer endpoint", customerId);
-           //return null;
+        if( stripeCustomerId == null ) {
+            stripeCustomerId = createStripeCustomer(chargeRequest);
+        }
+        //save stripe customerId in Customer table
+        if(stripeCustomerId != null ) {
+            saveStripeCustomer(stripeCustomerId, customerId);
         }
 
+        return stripeCustomerId;
+    }
 
+    private String getStripeCustomerId(Integer customerId) {
+        String stripeCustomerId = null;
+
+        Optional<CustomerStripe> stripeInfo = customerStripeRepository.findByCustomerId(customerId);
+        if(stripeInfo.isPresent()) {
+            String encrptedStripeCustomerId = stripeInfo.get().getStripeId();
+            if(encrptedStripeCustomerId != null) {
+
+                byte[] salt = stripeInfo.get().getSalt();
+
+                stripeCustomerId = EncryptionUtil.decrypt(encrptedStripeCustomerId, salt);
+
+                //decrypt
+                return stripeCustomerId;
+            }
+        }
+    }
+
+
+    private String createStripeCustomer(ChargeRequest chargeRequest) {
         try {
-            if(stripeCustomerId == null ) { //not pre-saved
-                Map<String, Object> chargeParamsForSaveCustomer = new HashMap<>();
-                chargeParamsForSaveCustomer.put("source", chargeRequest.getStripeToken());
-                chargeParamsForSaveCustomer.put("email", chargeRequest.getStripeEmail());
-                Customer customer = Customer.create(chargeParamsForSaveCustomer);
-                logger.debug("Saved customer info in Stripe {} ", customer.getId());
-                if(customer != null) {
-                    stripeCustomerId = customer.getId(); //use this stripe customerId for subsequent payments
-                }
+            Map<String, Object> chargeParamsForSaveCustomer = new HashMap<>();
+            chargeParamsForSaveCustomer.put("source", chargeRequest.getStripeToken());
+            chargeParamsForSaveCustomer.put("email", chargeRequest.getStripeEmail());
+            Customer customer = Customer.create(chargeParamsForSaveCustomer);
+            logger.debug("Saved customer info in Stripe {} ", customer.getId());
+            if(customer != null) {
+                return customer.getId(); //use this stripe customerId for subsequent payments
             }
         } catch (RateLimitException e) {
             // Too many requests made to the API too quickly
@@ -155,19 +170,19 @@ public class PaymentService {
             // Something else happened unrelated to Stripe
             logger.error("Something else happened unrelated to Stripe {} ",e.getMessage());
         }
+        return null;
+    }
 
-        //save stripe customerId in Customer table
-        if(stripeCustomerId != null ) {
-            customerEntity.setStripeCustomerID(stripeCustomerId);
-            try {
-                restTemplate.put(customerEndpointUPDATE, customerEntity);
-                logger.debug("Saved Stripe customer Id for customer {} in database", customerId);
-            } catch (Exception e) {
-                logger.error("Could not Save customer {} Stripe Id.. check customer endpoint", customerId);
-            }
-        }
+    @Async
+    public void saveStripeCustomer(String stripeId, Integer customerId) {
+        CustomerStripe customerStripe = new CustomerStripe();
 
-        return stripeCustomerId;
+        byte[] salt = EncryptionUtil.getSaltBytes();
+        String encryptedStripeId = EncryptionUtil.encrypt(stripeId, salt);
+        customerStripe.setStripeId(encryptedStripeId);
+        customerStripe.setSalt(salt);
+        customerStripe.setCustomerId(customerId);
+        customerStripeRepository.save(customerStripe);
     }
 
     @Async
